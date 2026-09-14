@@ -1,0 +1,99 @@
+---
+title: "employee-burnout-neural-network"
+author: "Duwa Mojadiddi"
+date: "2026-09-14"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## ##DATA PRE-PROCESSING PART 1
+
+```{r }
+employeeburnout.df <- read.csv("WorkFromHomeBurnout.csv", header = TRUE)
+View(employeeburnout.df)
+##scale Task completion
+maxtaskcr<-max(employeeburnout.df$task_completion_rate)
+mintaskcr<-min(employeeburnout.df$task_completion_rate)
+employeeburnout.df$taskcomplerateS<-(employeeburnout.df$task_completion_rate-mintaskcr)/(maxtaskcr-mintaskcr)
+##scale work hours
+maxworkhours<-max(employeeburnout.df$work_hours)
+minworkhours<-min(employeeburnout.df$work_hours)
+employeeburnout.df$workhoursS<-(employeeburnout.df$work_hours-minworkhours)/(maxworkhours-minworkhours)
+##scale screen time hours
+maxscreentimehours<-max(employeeburnout.df$screen_time_hours)
+minscreentimehours<-min(employeeburnout.df$screen_time_hours)
+employeeburnout.df$ScreenTimeHoursS<-(employeeburnout.df$screen_time_hours-minscreentimehours)/(maxscreentimehours-minscreentimehours)
+##scale meeting count
+maxmeetingscount<-max(employeeburnout.df$meetings_count)
+minmeetingscount<-min(employeeburnout.df$meetings_count)
+employeeburnout.df$meetingscountS<-(employeeburnout.df$meetings_count-minmeetingscount)/(maxmeetingscount-minmeetingscount)
+##scale breaks taken
+maxbreakstaken<-max(employeeburnout.df$breaks_taken)
+minbreakstaken<-min(employeeburnout.df$breaks_taken)
+employeeburnout.df$breakstakenS<-(employeeburnout.df$breaks_taken-minbreakstaken)/(maxbreakstaken-minbreakstaken)
+#scale sleep hours
+maxsleephours<-max(employeeburnout.df$sleep_hours)
+minsleephours<-min(employeeburnout.df$sleep_hours)
+employeeburnout.df$sleephoursS<-(employeeburnout.df$sleep_hours - minsleephours)/(maxsleephours-minsleephours)
+##dummy variable 
+employeeburnout.df$daytypeD<-ifelse(employeeburnout.df$day_type=='Weekend',1,0)
+#save CSV
+write.csv(employeeburnout.df,"WorkFromHomeEmployeeBurnoutPP.CSV")
+
+```
+
+
+##PART 2
+
+```{r}
+employeeburnout.df<-read.csv("WorkFromHomeEmployeeBurnoutPP.CSV", header = TRUE)
+View(employeeburnout.df)
+#Partition data
+set.seed(123)
+n.eb<-nrow(employeeburnout.df)
+train.idx.eb<-sample(n.eb,size=0.6*n.eb)
+train.data.eb<-employeeburnout.df[train.idx.eb,]
+valid.data.eb<-employeeburnout.df[-train.idx.eb,]
+nrow(valid.data.eb)
+
+```
+
+#Neural network #1 (one hidden layer of 3 nodes)
+
+
+```{r}
+library(neuralnet)
+set.seed(123)
+nn.eb1<-neuralnet(burnout_score~taskcomplerateS+workhoursS+ScreenTimeHoursS+meetingscountS+breakstakenS+sleephoursS+daytypeD+after_hours_work,data=train.data.eb,linear.output=T,hidden=3)
+plot(nn.eb1,rep="best")
+
+#Neural network #2 (two hidden layers, each with 2 nodes)
+set.seed(123)
+nn.eb2<-neuralnet(burnout_score~taskcomplerateS+workhoursS+ScreenTimeHoursS+meetingscountS+breakstakenS+sleephoursS+daytypeD+after_hours_work,data=train.data.eb,linear.output=T,hidden=c(2,2))
+plot(nn.eb2,rep="best")
+
+names(valid.data.eb)
+
+#RSME for Neural network #1
+set.seed(123)
+predict.eb1<-predict(nn.eb1,valid.data.eb[,c(13,14,15,16,17,18,19,8)])
+MSE.eb1<-sum((valid.data.eb$burnout_score-predict.eb1)^2)/nrow(valid.data.eb)
+MSE.eb1
+RMSE.eb1<-sqrt(MSE.eb1)
+RMSE.eb1
+
+#RSME for Neural network #2
+set.seed(123)
+predict.eb2<-predict(nn.eb2,valid.data.eb[,c(13,14,15,16,17,18,19,8)])
+MSE.eb2<-sum((valid.data.eb$burnout_score-predict.eb2)^2)/nrow(valid.data.eb)
+MSE.eb2
+RMSE.eb2<-sqrt(MSE.eb2)
+RMSE.eb2
+
+all.equal(predict.eb1, predict.eb2)
+
+```
+
