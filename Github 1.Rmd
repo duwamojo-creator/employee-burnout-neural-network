@@ -1,6 +1,6 @@
 ---
 title: "employee-burnout-neural-network"
-author: "Duwa Mojadiddi"
+author: "Duwa"
 date: "2026-09-14"
 output: word_document
 ---
